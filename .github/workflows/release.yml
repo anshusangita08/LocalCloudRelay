@@ -1,0 +1,68 @@
+name: release
+
+# Tags only. Nothing runs on a branch push, so a commit cannot publish a build by
+# accident - the tag is the decision.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # The tests gate the release. A tag that does not pass them publishes nothing.
+      - name: Test
+        run: dotnet test .\LocalCloudRelay.sln --nologo
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Publish
+        run: dotnet publish .\LocalCloudRelay\LocalCloudRelay.csproj -c Release -r win-x64 --self-contained -o .\dist --nologo -p:Version=${{ steps.version.outputs.version }}
+
+      # Proves the single-file output really is one file, because the whole point of
+      # the self-contained publish is that the target machine needs no runtime.
+      - name: Check the artifact is a single file
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem .\dist -File
+          $files | Format-Table Name, Length
+          if ($files.Count -ne 1) { throw "expected one file, found $($files.Count)" }
+          if ($files[0].Name -ne "LocalCloudRelay.exe") { throw "unexpected name $($files[0].Name)" }
+          if ($files[0].Length -lt 20MB) { throw "unexpectedly small: $($files[0].Length) bytes" }
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive .\dist\LocalCloudRelay.exe ".\LocalCloudRelay-${{ github.ref_name }}-win-x64.zip"
+
+      - name: Generate SHA256
+        shell: pwsh
+        run: Get-FileHash ".\LocalCloudRelay-${{ github.ref_name }}-win-x64.zip" -Algorithm SHA256 | Select-Object -ExpandProperty Hash | Out-File -Encoding utf8 ".\LocalCloudRelay-${{ github.ref_name }}-win-x64.zip.sha256"
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            LocalCloudRelay-*-win-x64.zip
+            LocalCloudRelay-*-win-x64.zip.sha256
+          generate_release_notes: true
+          body: |
+            Self-contained Windows x64 build. No .NET runtime required: unzip and run
+            `LocalCloudRelay.exe`. It creates a local API key on first launch and
+            starts listening on port 8787.
+
+            See [the README](https://github.com/${{ github.repository }}#build-from-source)
+            for what it is for and how to point a client at it.

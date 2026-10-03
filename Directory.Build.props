@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <!-- Clean with the analyzers on, so the gate can be real. `dotnet build` is the
+         gate; do not silence a promoted rule to go green, fix the code. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Designer/serialized surface is nullable-oblivious; our own code is not. -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>

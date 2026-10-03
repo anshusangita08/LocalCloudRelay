@@ -1,0 +1,51 @@
+root = true
+
+[*.cs]
+# Nullable
+dotnet_diagnostic.CS8600.severity = warning
+dotnet_diagnostic.CS8602.severity = warning
+dotnet_diagnostic.CS8603.severity = warning
+dotnet_diagnostic.CS8618.severity = warning
+dotnet_diagnostic.CS8625.severity = warning
+
+# Disposal. These are the rules that would have caught the leaks this repo shipped:
+# CA2000 the undisposed timer, CA1063/CA2215 the unwrapped System.Drawing objects
+# and the icon handle. Real findings get fixed, not suppressed - the only CA2000
+# suppressions in the tree are false positives and each carries its reason inline.
+dotnet_diagnostic.CA2000.severity = warning
+dotnet_diagnostic.CA1063.severity = warning
+dotnet_diagnostic.CA2215.severity = warning
+dotnet_diagnostic.CA1001.severity = warning
+dotnet_diagnostic.CA1848.severity = warning
+dotnet_diagnostic.CA2016.severity = warning
+dotnet_diagnostic.CA5350.severity = warning
+dotnet_diagnostic.CA5351.severity = warning
+
+# CA2007 is off deliberately. The rule wants ConfigureAwait(false) on every await,
+# which is exactly wrong in a WinForms app: after it the continuation runs on a
+# thread-pool thread and touching a control throws. ConfigureAwait(false) is only
+# correct in the UI-agnostic library code, and there is none in this project.
+dotnet_diagnostic.CA2007.severity = none
+
+# Globalization. This is a single-locale internal LAN tool with no resx and no
+# satellite assemblies, so "pass a literal to a localizable parameter" and
+# "specify StringComparison" are pure noise. The one place locale genuinely mattered
+# was JSON number parsing, which already passes InvariantCulture explicitly.
+dotnet_diagnostic.CA1303.severity = none
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = none
+dotnet_diagnostic.CA1310.severity = none
+
+# Micro-optimization and style suggestion rules. Not defects; they add churn to a
+# diff without changing behaviour.
+dotnet_diagnostic.CA1822.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1865.severity = warning
+dotnet_diagnostic.IDE0059.severity = none
+
+[*.Tests/*.cs]
+# Test doubles legitimately hold disposable fields across async lifetime methods and
+# dispose them in IAsyncLifetime.DisposeAsync, which the analyzer cannot follow.
+dotnet_diagnostic.CA1001.severity = none
+dotnet_diagnostic.CA2000.severity = none
+dotnet_diagnostic.CA2007.severity = none

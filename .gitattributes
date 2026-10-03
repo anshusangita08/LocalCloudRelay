@@ -1,0 +1,3 @@
+# Normalize line endings on checkin, check out CRLF on Windows.
+# Without this, every file churns between LF and CRLF across machines.
+* text=auto eol=crlf
